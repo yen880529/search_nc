@@ -29,10 +29,10 @@ def calculate(): # 函數名
     chamfer_r = float(chamfer_r_entry.get())
     program_number = float(program_number_entry.get())
     first_mm = float(first_mm_entry.get())
-    length_mm = float(length_mm_entry.get())+5
+    length_mm = float(length_mm_entry.get())-3
     finish = round(diameter - (((pich - spacing) / 2) / math.tan(math.radians(angle / 2)) - reserve) * 2, 2) #牙底
 
-    chamfer_times_mm = 0.05
+    chamfer_times_mm = 0.06
     chamfer_times = ((reserve + chamfer_r)/2)//chamfer_times_mm
 
     text_box_1.delete(1.0, tk.END)  # 清空文本框內容
@@ -56,12 +56,13 @@ def calculate(): # 函數名
                 results.append(max(value, 0))   # 防止 value 小於 0，雖然不太可能發生，除非輸入錯誤，用於防止輸入錯誤
 
                 # 更新遞減值 (縮小規律)
-                decrement = max(decrement * 0.9, min_decrement)  # 遞減值不能小於 min_decrement
+                decrement = max(first_mm / (steps + 1) ** 0.25, min_decrement)
+
             
             return steps, results  # 返回遞減次數和結果列表
         steps, results = roughing(first_mm , diameter , finish)#steps = 趟數 ， results = 遞減值
 
-        n = 0
+        n = 1 #從外徑減去起始深度開始    
         while n < steps :
 
             x = round(results[n],3)
@@ -69,39 +70,59 @@ def calculate(): # 函數名
 
             n += 1
             if (reserve != lathe_tool) and ((tool_type == "粗車牙刀") or (tool_type == "切槽後粗車")):
-                text_box_1.insert(tk.END, f"X{x}W{w}\n")
-                text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+                if (w >= 2) and (tool_type != "切槽後粗車"):
+                    text_box_1.insert(tk.END, f"X{x}W{w}\n")
+                    text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+
+                if (w <= 2) :
+                    text_box_1.insert(tk.END, f"X{x}W{w}\n")
+                    text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+
                 if (w > 4) and (tool_type != "切槽後粗車"):
                     text_box_1.insert(tk.END, f"X{x}W{round(w/1.5,3)}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
                     text_box_1.insert(tk.END, f"X{x}W{round(w/3,3)}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                if (w > 2.5 and w <= 4) and (tool_type != "切槽後粗車"):
+
+                if (w >= 3 and w <= 4) and (tool_type != "切槽後粗車"):
                     text_box_1.insert(tk.END, f"X{x}W{w/2}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                if w > 1 and w <= 2 :
+
+                if w >= 1 and w <= 2 :
                     text_box_1.insert(tk.END, f"X{x}W{0}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                if w > 1 and w >= 2 and tool_type != "切槽後粗車":
+
+                if w >= 1 and w >= 2 and tool_type != "切槽後粗車":
                         text_box_1.insert(tk.END, f"X{x}W{0}\n")
                         text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                if (w > 2.5 and w <= 4) and (tool_type != "切槽後粗車"):
+
+                if (w >= 3 and w <= 4) and (tool_type != "切槽後粗車"):
                     text_box_1.insert(tk.END, f"X{x}W-{w/2}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                if (w > 4) and (tool_type != "切槽後粗車"):
+
+                if (w >= 4) and (tool_type != "切槽後粗車"):
                     text_box_1.insert(tk.END, f"X{x}W-{round(w/3,3)}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
                     text_box_1.insert(tk.END, f"X{x}W-{round(w/1.5,3)}\n")
                     text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-                text_box_1.insert(tk.END, f"X{x}W-{w}\n")
-                text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+
+                if (w >= 2) and (tool_type != "切槽後粗車"):
+                    text_box_1.insert(tk.END, f"X{x}W-{w}\n")
+                    text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+                    
+                if (w <= 2) :
+                    text_box_1.insert(tk.END, f"X{x}W-{w}\n")
+                    text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
+
+
+
         if (reserve != lathe_tool) and ((tool_type == "粗車牙刀") or (tool_type == "切槽後粗車")):
             text_box_1.insert(tk.END, f"X{finish}W{0}\n")
             text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
 
 #########切槽刀############
 
-        n = 0    
+        n = 1 #從外徑減去起始深度開始    
         if (reserve != lathe_tool) and tool_type.startswith("切槽刀"):
             while (diameter - finish) - n > 0   :
                 if "(" in tool_type and "mm)" in tool_type:
@@ -126,52 +147,47 @@ def calculate(): # 函數名
     #############以下是牙精車############
 
     #車牙R角
-        n = 0
         total_times_mm = 0.09
         w = (pich) / 2
         finish_w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2)),3)
-        total_times = (w - finish_w)/total_times_mm
+        total_times = ((w - finish_w)/total_times_mm)+1
 
-        while total_times > n:
+        for i in range(int(total_times) + 1):  # 用 i 來避免影響 n
             x = round(diameter , 3)
-            w = round(((pich) / 2) - (total_times_mm * n),3)
-            if  reserve == lathe_tool :
-                text_box_1.insert(tk.END, f"X{x}W{w}\n")
+            w = round(((pich) / 2) - (total_times_mm * i), 3)
+            if reserve == lathe_tool:
+                text_box_1.insert(tk.END, f"X{x}W-{w}\n")
                 text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-            n += 1
 
-        n = 0
-        while n < chamfer_times :
-            x = round(diameter - ((n * chamfer_times_mm)*2),3)
-            w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2))-(math.sqrt((reserve + chamfer_r)**2 - ((reserve + chamfer_r) - (n * chamfer_times_mm))**2)), 3) 
-            if  reserve == lathe_tool :
-                text_box_1.insert(tk.END, f"X{x}W{w}\n")
+        for n in range(math.ceil(chamfer_times)):
+            x = round(diameter - ((n * chamfer_times_mm) * 2), 3)
+            sqrt_value = max(0, (reserve + chamfer_r)**2 - ((reserve + chamfer_r) - (n * chamfer_times_mm))**2)
+            w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2)) - math.sqrt(sqrt_value), 3)
+            if reserve == lathe_tool:
+                text_box_1.insert(tk.END, f"X{x}W-{w}\n")  # 檢查是否需要 `W-{w}`
                 text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-            n += 1    
 
-
-        n = 0
         total_times_mm = 0.09
         w = (pich) / 2
         finish_w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2)),3)
-        total_times = (w - finish_w)/total_times_mm
+        total_times = ((w - finish_w)/total_times_mm)+1
 
-        while total_times > n:
+        for i in range(int(total_times) + 1):  # 用 i 來避免影響 n
             x = round(diameter , 3)
-            w = round(((pich) / 2) - (total_times_mm * n),3)
-            if  reserve == lathe_tool :
-                text_box_1.insert(tk.END, f"X{x}W-{w}\n")
+            w = round(((pich) / 2) - (total_times_mm * i), 3)
+            if reserve == lathe_tool:
+                text_box_1.insert(tk.END, f"X{x}W{w}\n")
                 text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-            n += 1
 
-        n = 0
-        while n < chamfer_times :
-            x = round(diameter - ((n * chamfer_times_mm)*2),3)
-            w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2))-(math.sqrt((reserve + chamfer_r)**2 - ((reserve + chamfer_r) - (n * chamfer_times_mm))**2)), 3) 
-            if  reserve == lathe_tool :
-                text_box_1.insert(tk.END, f"X{x}W-{w}\n")
+        for n in range(math.ceil(chamfer_times)):  # 確保是整數
+            x = round(diameter - ((n * chamfer_times_mm) * 2), 3)
+            sqrt_value = max(0, (reserve + chamfer_r)**2 - ((reserve + chamfer_r) - (n * chamfer_times_mm))**2)
+            w = round((((diameter - finish) / 2) * math.tan(math.radians(angle / 2))) + (((reserve + chamfer_r))) * math.tan(math.radians(angle / 2)) - math.sqrt(sqrt_value), 3)
+            if reserve == lathe_tool:
+                text_box_1.insert(tk.END, f"X{x}W{w}\n")  # 檢查是否需要 `W-{w}`
                 text_box_1.insert(tk.END, f"M98P{int(program_number)}\n")
-            n += 1   
+
+
     #牙精車
         def finishing(first_mm , diameter , finish , reserve , chamfer_r):
             value = diameter - ((reserve + chamfer_r))        # 起始值
@@ -188,7 +204,7 @@ def calculate(): # 函數名
                 results.append(max(value, 0))  # 確保不會小於 0
 
                 # 更新遞減值 (縮小規律)
-                decrement = max(decrement * 0.9, min_decrement)  # 遞減值不能小於 min_decrement
+                decrement = max(first_mm / (steps + 1) ** 0.2, min_decrement)
         
             return steps, results  # 返回遞減次數和結果列表
         steps, results = finishing(first_mm , diameter , finish , reserve , chamfer_r)#steps = 趟數 ， results = 遞減值
@@ -257,17 +273,17 @@ def main_gui(root):
     # Label 和 Entry 設置字體
     tk.Label(main_window, text="牙距", font=default_font).grid(row=0, column=0, padx=10, pady=8, sticky="e")
     pich_entry = tk.Entry(main_window, width=10, font=default_font)
-    pich_entry.insert(0, "14")  # 預設值
+    pich_entry.insert(0, "")  # 預設值
     pich_entry.grid(row=0, column=1, padx=10, pady=8)
 
     tk.Label(main_window, text="齒頂寬", font=default_font).grid(row=1, column=0, padx=10, pady=8, sticky="e")
     spacing_entry = tk.Entry(main_window, width=10, font=default_font)
-    spacing_entry.insert(0, "1.75")
+    spacing_entry.insert(0, "")
     spacing_entry.grid(row=1, column=1, padx=10, pady=8)
 
     tk.Label(main_window, text="外徑", font=default_font).grid(row=2, column=0, padx=10, pady=8, sticky="e")
     diameter_entry = tk.Entry(main_window, width=10, font=default_font)
-    diameter_entry.insert(0, "360")
+    diameter_entry.insert(0, "")
     diameter_entry.grid(row=2, column=1, padx=10, pady=8)
 
     tk.Label(main_window, text="牙角度", font=default_font).grid(row=3, column=0, padx=10, pady=8, sticky="e")
@@ -305,7 +321,7 @@ def main_gui(root):
 
     tk.Label(main_window, text="加工總長度", font=default_font).grid(row=8, column=0, padx=10, pady=8, sticky="e")
     length_mm_entry = tk.Entry(main_window, width=10, font=default_font)
-    length_mm_entry.insert(0, "796")
+    length_mm_entry.insert(0, "")
     length_mm_entry.grid(row=8, column=1, padx=10, pady=8)
 
     tk.Label(main_window, text="副程式檔號", font=default_font).grid(row=9, column=0, padx=10, pady=8, sticky="e")
